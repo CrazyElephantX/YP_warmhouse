@@ -1,0 +1,1150 @@
+openapi: 3.0.0
+
+info:
+  title: Warmhouse Smart Home Management API
+  description: |
+    RESTful API для управления умным домом: устройства, дома, пользователи, телеметрия и команды.
+    Поддерживает полный жизненный цикл устройств и их состояний.
+  version: 1.0.0
+  contact:
+    name: Warmhouse Smart Home
+    email: 79636902266@ya.ru
+
+servers:
+  - url: https://api.warmhouse.example.com/v1
+    description: Production server
+  - url: https://api-dev01.warmhouse.example.com/v1
+    description: developer server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: devices
+    description: Операции управления устройствами
+  - name: houses
+    description: Операции управления домами
+  - name: commands
+    description: Операции отправки команд устройствам
+  - name: telemetry
+    description: Операции получения телеметрии
+  - name: device-types
+    description: Операции с типами устройств
+
+paths:
+  # ==================== HOUSES ====================
+  /houses:
+    get:
+      summary: Получить список домов текущего пользователя
+      operationId: listHouses
+      tags:
+        - houses
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Успешное получение списка домов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HouseListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    post:
+      summary: Создать новый дом
+      operationId: createHouse
+      tags:
+        - houses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHouseRequest'
+      responses:
+        '201':
+          description: Дом успешно создан
+          headers:
+            Location:
+              description: URL созданного ресурса
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/House'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /houses/{houseId}:
+    parameters:
+      - $ref: '#/components/parameters/HouseIdParam'
+    
+    get:
+      summary: Получить информацию о конкретном доме
+      operationId: getHouseById
+      tags:
+        - houses
+      responses:
+        '200':
+          description: Информация о доме
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/House'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    patch:
+      summary: Частично обновить информацию о доме
+      operationId: updateHouse
+      tags:
+        - houses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHouseRequest'
+      responses:
+        '200':
+          description: Дом успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/House'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      summary: Удалить дом (soft delete)
+      operationId: deleteHouse
+      tags:
+        - houses
+      responses:
+        '204':
+          description: Дом успешно удален
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== DEVICES ====================
+  /houses/{houseId}/devices:
+    parameters:
+      - $ref: '#/components/parameters/HouseIdParam'
+    
+    get:
+      summary: Получить список устройств в доме
+      operationId: listDevicesInHouse
+      tags:
+        - devices
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          description: Фильтр по статусу устройства
+          required: false
+          schema:
+            $ref: '#/components/schemas/DeviceStatus'
+        - name: type_id
+          in: query
+          description: Фильтр по типу устройства
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: location
+          in: query
+          description: Фильтр по локации устройства
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список устройств в доме
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    post:
+      summary: Добавить новое устройство в дом
+      operationId: createDevice
+      tags:
+        - devices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceRequest'
+      responses:
+        '201':
+          description: Устройство успешно создано
+          headers:
+            Location:
+              description: URL созданного ресурса
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceIdParam'
+    
+    get:
+      summary: Получить информацию о конкретном устройстве
+      operationId: getDeviceById
+      tags:
+        - devices
+      responses:
+        '200':
+          description: Информация об устройстве
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    patch:
+      summary: Частично обновить информацию об устройстве
+      operationId: updateDevice
+      tags:
+        - devices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceRequest'
+      responses:
+        '200':
+          description: Устройство успешно обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      summary: Удалить устройство (soft delete)
+      operationId: deleteDevice
+      tags:
+        - devices
+      responses:
+        '204':
+          description: Устройство успешно удалено
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}/status:
+    parameters:
+      - $ref: '#/components/parameters/DeviceIdParam'
+    
+    patch:
+      summary: Обновить статус устройства
+      operationId: updateDeviceStatus
+      tags:
+        - devices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceStatusRequest'
+      responses:
+        '200':
+          description: Статус устройства успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== COMMANDS ====================
+  /devices/{deviceId}/commands:
+    parameters:
+      - $ref: '#/components/parameters/DeviceIdParam'
+    
+    post:
+      summary: Отправить команду устройству
+      operationId: sendCommandToDevice
+      tags:
+        - commands
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCommandRequest'
+      responses:
+        '202':
+          description: Команда принята к исполнению
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /commands/{commandId}:
+    parameters:
+      - name: commandId
+        in: path
+        description: Идентификатор команды
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    get:
+      summary: Получить статус выполнения команды
+      operationId: getCommandStatus
+      tags:
+        - commands
+      responses:
+        '200':
+          description: Статус команды
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== TELEMETRY ====================
+  /devices/{deviceId}/telemetry:
+    parameters:
+      - $ref: '#/components/parameters/DeviceIdParam'
+    
+    get:
+      summary: Получить телеметрию устройства
+      operationId: getDeviceTelemetry
+      tags:
+        - telemetry
+      parameters:
+        - name: start_time
+          in: query
+          description: Начало временного диапазона (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: Конец временного диапазона (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Данные телеметрии устройства
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    post:
+      summary: Добавить данные телеметрии
+      operationId: createTelemetryData
+      tags:
+        - telemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTelemetryRequest'
+      responses:
+        '201':
+          description: Данные телеметрии успешно добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryData'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== DEVICE TYPES ====================
+  /device-types:
+    get:
+      summary: Получить список типов устройств
+      operationId: listDeviceTypes
+      tags:
+        - device-types
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список типов устройств
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceTypeListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /device-types/{typeId}:
+    parameters:
+      - name: typeId
+        in: path
+        description: Идентификатор типа устройства
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    get:
+      summary: Получить информацию о типе устройства
+      operationId: getDeviceTypeById
+      tags:
+        - device-types
+      responses:
+        '200':
+          description: Информация о типе устройства
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceType'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен авторизации
+
+  parameters:
+    HouseIdParam:
+      name: houseId
+      in: path
+      description: Уникальный идентификатор дома
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+    DeviceIdParam:
+      name: deviceId
+      in: path
+      description: Уникальный идентификатор устройства
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: "987fcdeb-51a2-43d7-b789-123456789abc"
+
+    PageParam:
+      name: page
+      in: query
+      description: Номер страницы (начиная с 1)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Количество элементов на странице
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+
+    SortParam:
+      name: sort
+      in: query
+      description: "Сортировка (формат: field:asc или field:desc)"
+      required: false
+      schema:
+        type: string
+      example: "created_at:desc"
+
+  schemas:
+    # ==================== HOUSE SCHEMAS ====================
+    House:
+      type: object
+      required:
+        - id
+        - user_id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор дома
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        user_id:
+          type: string
+          format: uuid
+          description: Идентификатор владельца дома
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        name:
+          type: string
+          description: Название дома
+          example: "Загородный дом"
+          minLength: 1
+          maxLength: 255
+        address:
+          type: string
+          description: Адрес дома
+          example: "г. Москва, ул. Ленина, д. 1"
+          nullable: true
+        description:
+          type: string
+          description: Описание дома
+          example: "Двухэтажный дом с подвалом"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время создания записи
+          example: "2024-01-15T10:30:00Z"
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления
+          example: "2024-01-20T14:45:00Z"
+          readOnly: true
+        deleted_at:
+          type: string
+          format: date-time
+          description: Дата и время удаления (soft delete)
+          example: null
+          nullable: true
+          readOnly: true
+
+    CreateHouseRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Название дома
+          example: "Загородный дом"
+          minLength: 1
+          maxLength: 255
+        address:
+          type: string
+          description: Адрес дома
+          example: "г. Москва, ул. Ленина, д. 1"
+        description:
+          type: string
+          description: Описание дома
+          example: "Двухэтажный дом с подвалом"
+
+    UpdateHouseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Название дома
+          example: "Обновленное название"
+          minLength: 1
+          maxLength: 255
+        address:
+          type: string
+          description: Адрес дома
+          example: "г. Санкт-Петербург, Невский проспект, д. 10"
+        description:
+          type: string
+          description: Описание дома
+          example: "Трехэтажный дом с гаражом"
+
+    HouseListResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/House'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ==================== DEVICE SCHEMAS ====================
+    DeviceStatus:
+      type: string
+      enum:
+        - on
+        - off
+        - unknown
+      description: Статус устройства
+      example: "on"
+
+    Device:
+      type: object
+      required:
+        - id
+        - house_id
+        - type_id
+        - serial_number
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор устройства
+          example: "987fcdeb-51a2-43d7-b789-123456789abc"
+        house_id:
+          type: string
+          format: uuid
+          description: Идентификатор дома
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        type_id:
+          type: string
+          format: uuid
+          description: Идентификатор типа устройства
+          example: "456e7890-a12b-34c5-d678-901234567def"
+        serial_number:
+          type: string
+          description: Серийный номер устройства
+          example: "SN123456789"
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        location:
+          type: string
+          description: Расположение устройства
+          example: "Гостиная"
+          nullable: true
+        device_type:
+          $ref: '#/components/schemas/DeviceType'
+          description: Информация о типе устройства
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время создания записи
+          example: "2024-01-15T10:30:00Z"
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления
+          example: "2024-01-20T14:45:00Z"
+          readOnly: true
+        deleted_at:
+          type: string
+          format: date-time
+          description: Дата и время удаления (soft delete)
+          nullable: true
+          readOnly: true
+
+    CreateDeviceRequest:
+      type: object
+      required:
+        - type_id
+        - serial_number
+        - status
+      properties:
+        type_id:
+          type: string
+          format: uuid
+          description: Идентификатор типа устройства
+          example: "456e7890-a12b-34c5-d678-901234567def"
+        serial_number:
+          type: string
+          description: Серийный номер устройства
+          example: "SN123456789"
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        location:
+          type: string
+          description: Расположение устройства
+          example: "Спальня"
+
+    UpdateDeviceRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        location:
+          type: string
+          description: Расположение устройства
+          example: "Кухня"
+
+    UpdateDeviceStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+
+    DeviceListResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ==================== DEVICE TYPE SCHEMAS ====================
+    DeviceType:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор типа устройства
+          example: "456e7890-a12b-34c5-d678-901234567def"
+        name:
+          type: string
+          description: Название типа устройства
+          example: "Термостат"
+        description:
+          type: string
+          description: Описание типа устройства
+          example: "Умный термостат с управлением температурой"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время создания записи
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления
+          readOnly: true
+        deleted_at:
+          type: string
+          format: date-time
+          description: Дата и время удаления (soft delete)
+          nullable: true
+          readOnly: true
+
+    DeviceTypeListResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceType'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ==================== COMMAND SCHEMAS ====================
+    CommandStatus:
+      type: string
+      enum:
+        - pending
+        - processing
+        - completed
+        - failed
+      description: Статус выполнения команды
+      example: "completed"
+
+    SendCommandRequest:
+      type: object
+      required:
+        - command
+      properties:
+        command:
+          type: string
+          description: Название команды
+          example: "set_temperature"
+        parameters:
+          type: object
+          description: Параметры команды (произвольная структура)
+          example:
+            temperature: 22
+            mode: "auto"
+          additionalProperties: true
+
+    CommandResponse:
+      type: object
+      required:
+        - id
+        - device_id
+        - command
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор команды
+          example: "cmd-123e4567-e89b-12d3-a456-426614174000"
+        device_id:
+          type: string
+          format: uuid
+          description: Идентификатор устройства
+          example: "987fcdeb-51a2-43d7-b789-123456789abc"
+        command:
+          type: string
+          description: Название команды
+          example: "set_temperature"
+        parameters:
+          type: object
+          description: Параметры команды
+          example:
+            temperature: 22
+            mode: "auto"
+          additionalProperties: true
+        status:
+          $ref: '#/components/schemas/CommandStatus'
+        result:
+          type: object
+          description: Результат выполнения команды
+          nullable: true
+          additionalProperties: true
+        error_message:
+          type: string
+          description: Сообщение об ошибке (если есть)
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время создания команды
+          example: "2024-01-20T15:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления статуса
+          example: "2024-01-20T15:30:05Z"
+
+    # ==================== TELEMETRY SCHEMAS ====================
+    TelemetryData:
+      type: object
+      required:
+        - id
+        - device_id
+        - timestamp
+        - value
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор записи телеметрии
+          example: "tel-123e4567-e89b-12d3-a456-426614174000"
+        device_id:
+          type: string
+          format: uuid
+          description: Идентификатор устройства
+          example: "987fcdeb-51a2-43d7-b789-123456789abc"
+        timestamp:
+          type: string
+          format: date-time
+          description: Время измерения
+          example: "2024-01-20T15:30:00Z"
+        value:
+          type: number
+          format: float
+          description: Значение телеметрии
+          example: 22.5
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время создания записи
+          readOnly: true
+
+    CreateTelemetryRequest:
+      type: object
+      required:
+        - timestamp
+        - value
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Время измерения
+          example: "2024-01-20T15:30:00Z"
+        value:
+          type: number
+          format: float
+          description: Значение телеметрии
+          example: 22.5
+
+    TelemetryListResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryData'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ==================== COMMON SCHEMAS ====================
+    PaginationMeta:
+      type: object
+      required:
+        - page
+        - limit
+        - total_items
+        - total_pages
+      properties:
+        page:
+          type: integer
+          description: Текущая страница
+          example: 1
+          minimum: 1
+        limit:
+          type: integer
+          description: Количество элементов на странице
+          example: 20
+          minimum: 1
+        total_items:
+          type: integer
+          description: Общее количество элементов
+          example: 150
+          minimum: 0
+        total_pages:
+          type: integer
+          description: Общее количество страниц
+          example: 8
+          minimum: 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Код ошибки
+              example: "DEVICE_NOT_FOUND"
+            message:
+              type: string
+              description: Описание ошибки
+              example: "Устройство с указанным ID не найдено"
+            details:
+              type: array
+              description: Дополнительные детали ошибки
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: "device_id"
+                  reason:
+                    type: string
+                    example: "Значение не является валидным UUID"
+
+  responses:
+    BadRequestError:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Ошибка валидации входных данных"
+              details:
+                - field: "status"
+                  reason: "Допустимые значения: on, off, unknown"
+
+    UnauthorizedError:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Требуется аутентификация"
+
+    ForbiddenError:
+      description: Доступ запрещен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "Недостаточно прав для выполнения операции"
+
+    NotFoundError:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "NOT_FOUND"
+              message: "Запрашиваемый ресурс не найден"
+
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: "INTERNAL_SERVER_ERROR"
+              message: "Произошла внутренняя ошибка сервера"
