@@ -1,0 +1,104 @@
+@startuml ERDiagram
+
+!function $setBold($a)
+!return "<b>" + $a + " </b>"
+!endfunction
+
+title Warmhouse Smart Home Ecosystem
+
+package "Database" {
+
+entity "$setBold("Пользователи (User)")" as User {
+  *id : UUID <PK>
+  ..
+  * created_at : timestamp
+  * updated_at : timestamp
+  * username : string
+  * email : string
+  deleted_at : timestamp
+  password_hash : string
+  first_name : string
+  last_name : string
+  phone : string
+}
+
+entity "$setBold("Дома (House)")" as House {
+  * id : UUID <PK>
+  * user_id : UUID <FK>
+  ..
+  * created_at : timestamp
+  * updated_at : timestamp
+  * name : string
+  deleted_at : timestamp
+  address : string
+  description : text
+}
+
+entity "$setBold("Устройства (Device)")" as Device {
+  * id : UUID <PK>
+  * house_id : UUID <FK>
+  * type_id : UUID <FK>
+  ..
+  * created_at : timestamp
+  * updated_at : timestamp
+  deleted_at : timestamp
+  serial_number : string
+  status : enum(string)
+  location : string
+}
+
+ enum "$setBold("Статус (status)")" as status {
+  on
+  off
+  unknown
+}
+
+entity "$setBold("Типы устройств (DeviceType)")" as DeviceType {
+  * id : UUID <PK>
+  ..
+  * created_at : timestamp
+  * updated_at : timestamp
+  deleted_at : timestamp
+  name : string
+  description : text
+}
+
+entity "$setBold("Данные телементрии (TelemtryData)")" as TelemtryData {
+  * id : UUID <PK>
+  device_id : UUID <FK>
+  ..
+  * created_at : timestamp
+  * updated_at : timestamp
+  deleted_at : timestamp
+  timestamp : datetime
+  value : float
+}
+
+entity Module {
+  * id : UUID
+  * house_id : UUID
+  ..
+  * created_at : timestamp
+  * updated_at : timestamp
+  * name : string
+  deleted_at : timestamp
+  description : text
+}
+
+}
+
+Device::status --|| status
+User::id "1..*" - "*" House::user_id : owns
+House::id "1..*" - "*" Device : contains
+Device::id "1" -- "1" DeviceType : has_type
+Device::id "1" - "*" TelemtryData::device_id : generates
+Module "1..*" o-- "1..*" Device : consists_of
+
+legend right
+$setBold("Условные обозначения:")
+* - обязательное поле
+<PK> - первичный ключ
+<FK> - внешний ключ
+end legend
+
+@enduml
