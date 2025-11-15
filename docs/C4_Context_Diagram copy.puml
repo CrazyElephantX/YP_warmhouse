@@ -1,0 +1,23 @@
+plantuml
+@startuml Warmhouse_Context_C4
+!NEW_C4_STYLE = 1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+
+LAYOUT_WITH_LEGEND()
+LAYOUT_TOP_DOWN()
+
+title System Context diagram for Warmhouse Smart Home Ecosystem
+
+Person(homeowner, "Пользователи умного дома", "Пользователь, управляющий смарт-устройствами в своем доме через веб-интерфейс")
+Person(supportTeam, "Администратор", "Команда поддержки и настройки системы")
+
+System(warmhouse, "Warmhouse Smart Home Ecosystem", "Приложение для управляения датчиками температуры в доме\nGolang")
+
+System_Ext(heatingSystem, "Heating System", "Система отопления")
+
+Rel(homeowner, warmhouse, "Использует web-интерфейс", "REST/HTTPS")
+Rel(warmhouse, heatingSystem, "Отправляет команды и получает данные телеметрии", "REST/HTTPS")
+Rel(supportTeam, warmhouse, "Manages users and devices\nthrough admin dashboard", "REST/HTTPS")
+
+@enduml

@@ -1,0 +1,41 @@
+plantuml
+@startuml Warmhouse_Container_C4
+!NEW_C4_STYLE = 1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_TOP_DOWN()
+LAYOUT_WITH_LEGEND()
+
+Person(homeowner, "Пользователи умного дома", "Пользователь, управляющий смарт-устройствами в своем доме через веб-интерфейс")
+Person(supportTeam, "Администратор", "Команда поддержки и настройки системы")
+
+System_Boundary(c1, "Warmhouse Smart Home Ecosystem"){
+    Container(webApp, "Web App", "React", "Веб-приложение для управления и взаимодействия с устройствами")
+    Container(gatewayAPI, "API Gateway", "Golang", "")
+    
+    Container(IAM, "Authentication & Authorization Service", "Golang", "Аутентификации и авторизации пользователей")
+    
+    Container(heating, "Heating Control Service", "Golang", "Управляет температурой и снимает метрики с датчиков")
+    
+    ContainerDb(db, "Database", "PostgreSQL", "Данные пользователей и устройств")
+
+    Rel(homeowner, webApp, "Использует для управления и взаимодействия с устройствами")
+    Rel(supportTeam, webApp, "Использует для конфигурирования устройств")
+    Rel(webApp, gatewayAPI, "Использует для получения данных и взаимодействия с устройствами","JSON,HTTPS")
+    Rel(gatewayAPI, IAM, "Проверка токена и прав доступа","REST")
+
+    Rel(gatewayAPI, heating, "Передача команды","gRPC")
+
+
+    Rel(heating, db, "Чтение/Запись информации")
+    Rel(IAM, db, "Чтение/Запись информации")
+
+}
+
+Container_Ext(device, "Умное устройство", "", "")
+
+Rel(device, gatewayAPI, "Отправка событий")
+Rel(gatewayAPI, device, "Исполнение команды")
+
+
+@enduml
